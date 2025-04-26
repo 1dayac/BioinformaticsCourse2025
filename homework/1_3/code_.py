@@ -27,42 +27,57 @@ def score_row(a, b, DEL, INS, MATCH, MISMATCH):
 def nw_align(a, b, DEL, INS, MATCH, MISMATCH):
     m, n = len(a), len(b)
     prev = [j * INS for j in range(n + 1)]
-    path = [[None] * (n + 1) for _ in range(m + 1)]
-
     for i in range(1, m + 1):
         curr = [0] * (n + 1)
         curr[0] = i * DEL
-        path[i][0] = (i - 1, 0)  # delete from above
         for j in range(1, n + 1):
-            match_mismatch = prev[j-1] + (MATCH if a[i-1] == b[j-1] else MISMATCH)
-            delete = prev[j] + DEL
-            insert = curr[j-1] + INS
-            best = max(match_mismatch, delete, insert)
-            curr[j] = best
-            if best == match_mismatch:
-                path[i][j] = (i-1, j-1)
-            elif best == delete:
-                path[i][j] = (i-1, j)
-            else:
-                path[i][j] = (i, j-1)
-        prev = curr
-
+            match_mismatch = MATCH if a[i-1] == b[j-1] else MISMATCH
+            curr[j] = max(
+                prev[j-1] + match_mismatch,
+                prev[j] + DEL,
+                curr[j-1] + INS
+            )
+        prev, curr = curr, prev
     align_a, align_b = "", ""
     i, j = m, n
+
     while i > 0 or j > 0:
-        pi, pj = path[i][j]
-        if pi == i-1 and pj == j-1:
+        score = [0, 0, 0]  # diag, up, left
+
+        if i > 0 and j > 0:
+            match_mismatch = MATCH if a[i-1] == b[j-1] else MISMATCH
+            score[0] = (i-1) * DEL + (j-1) * INS + match_mismatch
+        else:
+            score[0] = float('-inf')
+
+        if i > 0:
+            score[1] = (i-1) * DEL + j * INS + DEL
+        else:
+            score[1] = float('-inf')
+
+        if j > 0:
+            score[2] = i * DEL + (j-1) * INS + INS
+        else:
+            score[2] = float('-inf')
+
+        move = max(enumerate(score), key=lambda x: x[1])[0]
+        
+        if move == 0:
             align_a = a[i-1] + align_a
             align_b = b[j-1] + align_b
-        elif pi == i-1 and pj == j:
+            i -= 1
+            j -= 1
+        elif move == 1:
             align_a = a[i-1] + align_a
             align_b = '-' + align_b
-        else:  # pi == i and pj == j-1
+            i -= 1
+        else:
             align_a = '-' + align_a
             align_b = b[j-1] + align_b
-        i, j = pi, pj
+            j -= 1
 
     return align_a, align_b
+
 
 def algo_hirschberg(a, b,DEL, INS,MATCH, MISMATCH):
     node = CallNode(a, b)
